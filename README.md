@@ -6,7 +6,7 @@ First, install all dependecies
 npm i
 ```
 
-then run the development server:
+Then, run the development server:
 
 ```bash
 npm run dev
