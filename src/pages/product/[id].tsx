@@ -1,9 +1,11 @@
 import { ImageContainer, ProductContainer, ProductDetails } from "@/styles/pages/product"
 import { GetStaticPaths, GetStaticProps } from "next"
+import { useState } from 'react'
 import { stripe } from "@/lib/stripe"
 import Stripe from "stripe"
 import { useRouter } from "next/router"
 import Image from "next/image"
+import axios from "axios"
 
 
 
@@ -13,14 +15,33 @@ interface ProductProps {
         name: string,
         description: string,
         imageUrl: string,
-        price: string
+        price: string,
+        priceId: string
     }
 }
 
 export default function Product ({ product }: ProductProps) {
     const { isFallback } = useRouter()
+    const [isCreatingCheckoutSession, setIsCreatingChecoutSession] = useState(false)
 
     if (isFallback) return <h1>Loading...</h1>
+
+    async function handleCheckout () {
+        try {
+            setIsCreatingChecoutSession(true)
+
+            const response = await axios.post('/api/checkout', {
+                priceId: product.priceId
+            })
+
+            window.location.href = response.data.checkoutUrl
+        } catch(err) {
+            setIsCreatingChecoutSession(false)
+
+            alert('Falha ao redirecionar')
+        }
+    }
+
     return (
         <ProductContainer>
             <ImageContainer>
@@ -30,7 +51,7 @@ export default function Product ({ product }: ProductProps) {
                 <h1>{product.name}</h1>
                 <span>{product.price}</span>
                 <p>{product.description}</p>
-                <button>Comprar</button>
+                <button onClick={handleCheckout} disabled={isCreatingCheckoutSession}>Comprar</button>
             </ProductDetails>
         </ProductContainer>
     )
@@ -61,9 +82,10 @@ export const getStaticProps: GetStaticProps<any, { id: string }> = async ({ para
                 name: product.name,
                 description: product.description,
                 imageUrl: product.images[0],
+                priceId: price.id,
                 price: new Intl.NumberFormat('pt-BR', {
-                style: 'currency',
-                currency: 'BRL'
+                    style: 'currency',
+                    currency: 'BRL'
                 }).format(price.unit_amount as number / 100)
             }
         },
